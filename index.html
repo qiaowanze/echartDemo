@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>line</title>
+    <script src="/jquery-high.js"></script>
+    <script src="/echarts.js"></script>
+</head>
+<div id="nav_chart" style="     position: absolute;
+left: 0px;
+top: 0px;
+width: 1000px;
+height: 400px;
+user-select: none;
+-webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+padding: 0px;
+margin: 0px;
+border-width: 0px;">
+
+</div>
+
+<body>
+    <script>
+        //产品净值图表信息（日期搜索）
+        $(function () {
+
+
+            $.getJSON('/data.json', data => {
+                var tradeDateList = []; // 交易日期
+                var navList = []; // 净值
+                var totalNavList = []; // 参考累计净值
+                var dataList = data.results;
+                console.log(dataList)
+                if (dataList !== undefined && dataList.length > 0) {
+                    $("#nav_chart").show();
+                    var maxIndex = dataList.length - 1;
+                    for (var i = maxIndex; i >= 0; i--) {
+                        tradeDateList.push(dataList[i].nav_date);
+                        var nav = dataList[i].nav;
+                        var totalNav = dataList[i].total_nav;
+                        navList.push(nav);
+                        totalNavList.push(totalNav);
+                    }
+                    loadNavChart(tradeDateList, navList, totalNavList);
+                }
+            })
+        })
+
+        function queryZgProdNavMap(prod_code, start_time, end_time) {
+            //重新请求 再次获取数据  重新渲染
+        }
+
+
+        function loadNavChart(dateList, navList, totalNavList) {
+            var navChart = document.getElementById('nav_chart');
+            var myChart = echarts.init(navChart);
+            var option = {
+                tooltip: {
+                    trigger: 'axis'
+                },
+                grid: {
+                    left: '5%',
+                    top: '5%',
+                    bottom: '20%',
+                    right: '5%'
+                },
+                legend: {
+                    bottom: 10,
+                    icon: 'rect',
+                    itemGap: 75,
+                    data: ['单位净值', '累计净值'],
+                    selected: {
+                        '单位净值': navList.length !== 0,
+                        '累计净值': totalNavList.length !== 0
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    title: "交易日期",
+                    data: dateList
+                },
+                yAxis: {
+                    type: 'value',
+                    min: function (value) {
+                        return value.min - (value.max - value.min) / 4;
+                    },
+                    max: function (value) {
+                        return value.max + (value.max - value.min) / 4;
+                    },
+                    axisLabel: {
+                        showMinLabel: false,
+                        showMaxLabel: false,
+                        formatter: function (value) {
+                            return value.toFixed(4);
+                        }
+                    }
+                },
+                series: setSeries(navList, totalNavList)
+            };
+            myChart.setOption(option);
+        }
+
+        function setSeries(navList, totalNavList) {
+            var series = [];
+            var navItem = {
+                name: '单位净值',
+                type: 'line',
+                itemStyle: {
+                    normal: {
+                        color: "#F5A623"
+                    }
+                },
+                data: navList
+            };
+            series.push(navItem);
+
+            var totalNavSum = sumTotal(totalNavList);
+            if (totalNavSum > 0) {
+                var totalItem = {
+                    name: '累计净值',
+                    type: 'line',
+                    itemStyle: {
+                        normal: {
+                            color: "#4C2D82"
+                        }
+                    },
+                    data: totalNavList
+                };
+                series.push(totalItem);
+            }
+            return series;
+        }
+
+        //计算累计净值是否大于0
+        function sumTotal(array) {
+            var arr = JSON.parse('[' + String(array) + ']');
+            var total = 0,
+                len = arr.length;
+            for (var i = 0; i < len; i++) {
+                total += arr[i];
+            }
+            return total;
+        }
+    </script>
+</body>
+
+</html>
